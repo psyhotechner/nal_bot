@@ -33,10 +33,18 @@ class TelegramBot:
         user_id = message.from_user.id
         fullname = message.text
 
-        await state.update_data(fullname=fullname)
-        await message.answer("Введите вашу специальность:")
-
-        await UserRegistration.waiting_for_specialty.set()
+        try:
+            if len(fullname.split()) != 3:
+                raise ValueError("Неверный формат ФИО")
+            if not all(name.isalpha() for name in fullname.split()):
+                raise ValueError("ФИО должно состоять только из букв")
+        except ValueError as e:
+            await message.answer(f"Ошибка: {e}")
+            await message.answer("Еще раз введите свое ФИО в формате: <code>Иванов Иван Иванович</code>")
+        else:
+            await state.update_data(fullname=fullname)
+            await message.answer("Введите вашу специальность:")
+            await UserRegistration.waiting_for_specialty.set()
 
     async def add_user_specialty(self, message: types.Message, state: FSMContext):
         user_id = message.from_user.id
@@ -44,10 +52,10 @@ class TelegramBot:
         fullname = data.get("fullname")
         specialty = message.text
 
-        registration_date = datetime.datetime.now()
+        registration_date = datetime.datetime.now().date()
 
         last_name, first_name, second_name = fullname.split(' ')
-        self.database.add_user(user_id, last_name, first_name, second_name, specialty, registration_date)
+        self.database.add_user(user_id, last_name, first_name, second_name, registration_date, specialty)
 
         await message.answer("Данные сохранены в базе данных")
         await state.finish()
